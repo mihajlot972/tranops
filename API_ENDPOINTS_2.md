@@ -444,19 +444,24 @@ Cancel/delete a trip.
 
 ---
 
-## 4. Trip Assignments
+## 4. Ride Assignments
 
-### GET /trips/pending-assignment
+### GET /assignments
 
-Fetch trips pending driver/vehicle assignment.
+Fetch all ride assignments (pending, assigned, completed).
 
 **Query Parameters:**
-| Parameter  | Type   | Required | Description                       |
-|------------|--------|----------|-----------------------------------|
-| tripType   | string | No       | Filter by trip type               |
-| region     | string | No       | Filter by region                  |
-| limit      | number | No       | Max results                       |
-| offset     | number | No       | Pagination offset                 |
+| Parameter  | Type    | Required | Description                                      |
+|------------|---------|----------|--------------------------------------------------|
+| status     | string  | No       | pending, assigned, in-progress, completed        |
+| urgency    | string  | No       | urgent (within 2hrs), upcoming, all              |
+| tripType   | string  | No       | round-trip, one-way, same-day, wheelchair        |
+| region     | string  | No       | Filter by pickup region                          |
+| driverId   | string  | No       | Filter by assigned driver                        |
+| dateFrom   | string  | No       | ISO8601 date                                     |
+| dateTo     | string  | No       | ISO8601 date                                     |
+| limit      | number  | No       | Max results (default: 50)                        |
+| offset     | number  | No       | Pagination offset                                |
 
 **Response:**
 ```json
@@ -464,28 +469,173 @@ Fetch trips pending driver/vehicle assignment.
   "success": true,
   "data": [
     {
+      "assignmentId": "string",
       "tripId": "string",
       "callId": "string",
-      "tripType": "string",
+      "tripType": "round-trip | one-way | same-day | wheelchair",
       "passengerName": "string",
       "passengerPhone": "string",
       "pickup": "string",
       "dropoff": "string",
+      "returnPickup": "string | null",
+      "returnDropoff": "string | null",
       "scheduledDate": "ISO8601 datetime",
       "scheduledTime": "string",
+      "returnTime": "string | null",
       "createdAt": "ISO8601 datetime",
       "notes": "string",
-      "driver": null,
-      "vehicle": null
+      "status": "pending | assigned | in-progress | completed | cancelled",
+      "isUrgent": "boolean",
+      "driver": {
+        "id": "string",
+        "name": "string"
+      } | null,
+      "vehicle": {
+        "id": "string",
+        "name": "string",
+        "type": "string"
+      } | null,
+      "assignedAt": "ISO8601 datetime | null",
+      "assignedBy": "string | null"
     }
   ],
+  "total": "number",
+  "urgentCount": "number",
+  "pendingCount": "number"
+}
+```
+
+---
+
+### GET /assignments/pending
+
+Fetch trips pending driver/vehicle assignment (used by AssignmentsActivityModal).
+
+**Query Parameters:**
+| Parameter  | Type    | Required | Description                                      |
+|------------|---------|----------|--------------------------------------------------|
+| tripType   | string  | No       | round-trip, one-way, same-day, wheelchair        |
+| region     | string  | No       | Filter by pickup region                          |
+| urgentOnly | boolean | No       | Only return trips within 2 hours                 |
+| sortBy     | string  | No       | scheduledDate, createdAt (default: scheduledDate)|
+| sortOrder  | string  | No       | asc, desc (default: asc)                         |
+| limit      | number  | No       | Max results                                      |
+| offset     | number  | No       | Pagination offset                                |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "urgent": [
+      {
+        "tripId": "string",
+        "callId": "string",
+        "tripType": "round-trip | one-way | same-day | wheelchair",
+        "passengerName": "string",
+        "passengerPhone": "string",
+        "pickup": "string",
+        "dropoff": "string",
+        "returnPickup": "string | null",
+        "returnDropoff": "string | null",
+        "scheduledDate": "ISO8601 datetime",
+        "scheduledTime": "string",
+        "returnTime": "string | null",
+        "createdAt": "ISO8601 datetime",
+        "notes": "string",
+        "driver": null,
+        "vehicle": null,
+        "isUrgent": true
+      }
+    ],
+    "upcoming": [
+      {
+        "tripId": "string",
+        "callId": "string",
+        "tripType": "round-trip | one-way | same-day | wheelchair",
+        "passengerName": "string",
+        "passengerPhone": "string",
+        "pickup": "string",
+        "dropoff": "string",
+        "returnPickup": "string | null",
+        "returnDropoff": "string | null",
+        "scheduledDate": "ISO8601 datetime",
+        "scheduledTime": "string",
+        "returnTime": "string | null",
+        "createdAt": "ISO8601 datetime",
+        "notes": "string",
+        "driver": null,
+        "vehicle": null,
+        "isUrgent": false
+      }
+    ]
+  },
+  "urgentCount": "number",
+  "upcomingCount": "number",
   "total": "number"
 }
 ```
 
 ---
 
-### POST /trips/{tripId}/assign
+### GET /assignments/{tripId}
+
+Fetch single assignment details.
+
+**Path Parameters:**
+| Parameter | Type   | Required | Description      |
+|-----------|--------|----------|------------------|
+| tripId    | string | Yes      | Unique trip ID   |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "tripId": "string",
+    "callId": "string",
+    "tripType": "round-trip | one-way | same-day | wheelchair",
+    "passengerName": "string",
+    "passengerPhone": "string",
+    "pickup": "string",
+    "dropoff": "string",
+    "returnPickup": "string | null",
+    "returnDropoff": "string | null",
+    "scheduledDate": "ISO8601 datetime",
+    "scheduledTime": "string",
+    "returnTime": "string | null",
+    "createdAt": "ISO8601 datetime",
+    "notes": "string",
+    "status": "pending | assigned | in-progress | completed | cancelled",
+    "isUrgent": "boolean",
+    "driver": {
+      "id": "string",
+      "name": "string",
+      "phone": "string"
+    } | null,
+    "vehicle": {
+      "id": "string",
+      "name": "string",
+      "type": "string",
+      "licensePlate": "string"
+    } | null,
+    "assignedAt": "ISO8601 datetime | null",
+    "assignedBy": "string | null",
+    "history": [
+      {
+        "action": "created | assigned | reassigned | unassigned | completed | cancelled",
+        "timestamp": "ISO8601 datetime",
+        "performedBy": "string",
+        "details": {}
+      }
+    ]
+  }
+}
+```
+
+---
+
+### POST /assignments/{tripId}/assign
 
 Assign driver and vehicle to a trip.
 
@@ -499,7 +649,9 @@ Assign driver and vehicle to a trip.
 {
   "driverId": "string",
   "vehicleId": "string",
-  "notes": "string"
+  "notes": "string",
+  "notifyDriver": "boolean",
+  "notifyPassenger": "boolean"
 }
 ```
 
@@ -507,16 +659,85 @@ Assign driver and vehicle to a trip.
 ```json
 {
   "success": true,
-  "tripId": "string",
-  "driverId": "string",
-  "vehicleId": "string",
-  "assignedAt": "ISO8601 datetime"
+  "data": {
+    "tripId": "string",
+    "driver": {
+      "id": "string",
+      "name": "string",
+      "phone": "string"
+    },
+    "vehicle": {
+      "id": "string",
+      "name": "string",
+      "type": "string"
+    },
+    "assignedAt": "ISO8601 datetime",
+    "assignedBy": "string",
+    "notifications": {
+      "driverNotified": "boolean",
+      "passengerNotified": "boolean"
+    }
+  }
 }
 ```
 
 ---
 
-### POST /trips/{tripId}/unassign
+### POST /assignments/{tripId}/reassign
+
+Reassign trip to a different driver/vehicle.
+
+**Path Parameters:**
+| Parameter | Type   | Required | Description      |
+|-----------|--------|----------|------------------|
+| tripId    | string | Yes      | Unique trip ID   |
+
+**Request Body:**
+```json
+{
+  "driverId": "string",
+  "vehicleId": "string",
+  "reason": "string",
+  "notifyPreviousDriver": "boolean",
+  "notifyNewDriver": "boolean",
+  "notifyPassenger": "boolean"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "tripId": "string",
+    "previousDriver": {
+      "id": "string",
+      "name": "string"
+    },
+    "newDriver": {
+      "id": "string",
+      "name": "string",
+      "phone": "string"
+    },
+    "previousVehicle": {
+      "id": "string",
+      "name": "string"
+    },
+    "newVehicle": {
+      "id": "string",
+      "name": "string",
+      "type": "string"
+    },
+    "reassignedAt": "ISO8601 datetime",
+    "reassignedBy": "string",
+    "reason": "string"
+  }
+}
+```
+
+---
+
+### POST /assignments/{tripId}/unassign
 
 Remove assignment from a trip.
 
@@ -528,7 +749,9 @@ Remove assignment from a trip.
 **Request Body:**
 ```json
 {
-  "reason": "string"
+  "reason": "string",
+  "notifyDriver": "boolean",
+  "notifyPassenger": "boolean"
 }
 ```
 
@@ -536,8 +759,208 @@ Remove assignment from a trip.
 ```json
 {
   "success": true,
-  "tripId": "string",
-  "unassignedAt": "ISO8601 datetime"
+  "data": {
+    "tripId": "string",
+    "previousDriver": {
+      "id": "string",
+      "name": "string"
+    },
+    "previousVehicle": {
+      "id": "string",
+      "name": "string"
+    },
+    "unassignedAt": "ISO8601 datetime",
+    "unassignedBy": "string",
+    "reason": "string"
+  }
+}
+```
+
+---
+
+### POST /assignments/auto-assign
+
+Auto-assign driver/vehicle based on availability and proximity.
+
+**Request Body:**
+```json
+{
+  "tripIds": ["string"],
+  "criteria": {
+    "prioritizeProximity": "boolean",
+    "prioritizeAvailability": "boolean",
+    "vehicleTypeMatch": "boolean",
+    "maxDistanceKm": "number"
+  },
+  "notifyDrivers": "boolean",
+  "notifyPassengers": "boolean"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "assigned": [
+      {
+        "tripId": "string",
+        "driverId": "string",
+        "driverName": "string",
+        "vehicleId": "string",
+        "vehicleName": "string",
+        "distanceKm": "number",
+        "estimatedPickupTime": "ISO8601 datetime"
+      }
+    ],
+    "unassigned": [
+      {
+        "tripId": "string",
+        "reason": "no_available_driver | no_matching_vehicle | out_of_range"
+      }
+    ],
+    "assignedCount": "number",
+    "unassignedCount": "number"
+  }
+}
+```
+
+---
+
+### GET /assignments/history
+
+Fetch assignment history/audit log.
+
+**Query Parameters:**
+| Parameter  | Type   | Required | Description                                      |
+|------------|--------|----------|--------------------------------------------------|
+| tripId     | string | No       | Filter by specific trip                          |
+| driverId   | string | No       | Filter by driver                                 |
+| action     | string | No       | assigned, reassigned, unassigned, completed      |
+| dateFrom   | string | No       | ISO8601 date                                     |
+| dateTo     | string | No       | ISO8601 date                                     |
+| limit      | number | No       | Max results (default: 50)                        |
+| offset     | number | No       | Pagination offset                                |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "historyId": "string",
+      "tripId": "string",
+      "action": "assigned | reassigned | unassigned | completed | cancelled",
+      "timestamp": "ISO8601 datetime",
+      "performedBy": {
+        "id": "string",
+        "name": "string"
+      },
+      "driver": {
+        "id": "string",
+        "name": "string"
+      },
+      "vehicle": {
+        "id": "string",
+        "name": "string"
+      },
+      "reason": "string | null",
+      "details": {}
+    }
+  ],
+  "total": "number"
+}
+```
+
+---
+
+### GET /assignments/stats
+
+Fetch assignment statistics.
+
+**Query Parameters:**
+| Parameter  | Type   | Required | Description          |
+|------------|--------|----------|----------------------|
+| period     | string | No       | today, week, month   |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "pendingCount": "number",
+    "urgentCount": "number",
+    "assignedToday": "number",
+    "completedToday": "number",
+    "averageAssignmentTime": "string",
+    "byTripType": {
+      "round-trip": "number",
+      "one-way": "number",
+      "same-day": "number",
+      "wheelchair": "number"
+    },
+    "byDriver": [
+      {
+        "driverId": "string",
+        "driverName": "string",
+        "assignedCount": "number",
+        "completedCount": "number"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET /drivers/{driverId}/assignments
+
+Fetch all assignments for a specific driver.
+
+**Path Parameters:**
+| Parameter | Type   | Required | Description       |
+|-----------|--------|----------|-------------------|
+| driverId  | string | Yes      | Unique driver ID  |
+
+**Query Parameters:**
+| Parameter  | Type   | Required | Description                                 |
+|------------|--------|----------|---------------------------------------------|
+| status     | string | No       | pending, in-progress, completed             |
+| dateFrom   | string | No       | ISO8601 date                                |
+| dateTo     | string | No       | ISO8601 date                                |
+| limit      | number | No       | Max results                                 |
+| offset     | number | No       | Pagination offset                           |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "driver": {
+      "id": "string",
+      "name": "string",
+      "status": "available | busy | offline"
+    },
+    "assignments": [
+      {
+        "tripId": "string",
+        "tripType": "string",
+        "passengerName": "string",
+        "passengerPhone": "string",
+        "pickup": "string",
+        "dropoff": "string",
+        "scheduledDate": "ISO8601 datetime",
+        "scheduledTime": "string",
+        "status": "string",
+        "vehicle": {
+          "id": "string",
+          "name": "string"
+        }
+      }
+    ],
+    "todayCount": "number",
+    "upcomingCount": "number"
+  }
 }
 ```
 
